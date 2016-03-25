@@ -8,17 +8,15 @@ import android.support.v7.widget.SearchView;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
-import android.widget.Button;
-import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.VolleyLog;
+import com.android.volley.toolbox.ImageLoader;
 import com.android.volley.toolbox.JsonObjectRequest;
-import com.android.volley.toolbox.Volley;
+import com.android.volley.toolbox.NetworkImageView;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -32,13 +30,13 @@ public class MainActivity extends AppCompatActivity {
     private TextView description, sunrise, sunset, humidity, pressure, max_temp, min_temp;
 
     private String receivedCityName = "";
-
     private String URL = "http://api.openweathermap.org/data/2.5/weather?q=Hamburg&appid=44d0fc3e51b3da7b0e60c99de8bdfc88";
+    private String receivedIcon = "";
+    private String weatherIconURL = "http://openweathermap.org/img/w/";
 
+    private NetworkImageView mNetworkImageView;
+    private ImageLoader mImageLoader;
 
-    public void setURL(String receivedCityName){
-        URL = "http://api.openweathermap.org/data/2.5/weather?q=" + receivedCityName +"&appid=44d0fc3e51b3da7b0e60c99de8bdfc88";
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,8 +55,20 @@ public class MainActivity extends AppCompatActivity {
                     JSONArray jsonArrayWeather = response.getJSONArray("weather");
                     JSONObject jsonObjectDescription = jsonArrayWeather.getJSONObject(0);
                     String weatherDescription = jsonObjectDescription.getString("description");
-                    description.setText(weatherDescription);
+                    receivedIcon = jsonObjectDescription.getString("icon") + ".png";
+                    //set the Image URL for the weather icon
+                    setWeatherIconURL(receivedIcon);
+                    //Log.v("WeatherIconURL :", weatherIconURL);
+                    mImageLoader = MySingleton.getInstance(getApplication())
+                            .getImageLoader();
 
+                    mImageLoader.get(weatherIconURL, ImageLoader.getImageListener(
+                            mNetworkImageView,
+                            R.mipmap.ic_launcher,
+                            android.R.drawable.ic_dialog_alert
+                    ));
+                    mNetworkImageView.setImageUrl(weatherIconURL, mImageLoader);
+                    description.setText(weatherDescription);
 
                     JSONObject jsonObjectMain = response.getJSONObject("main");
                     int temp = convertToCelsius(jsonObjectMain.getDouble("temp"));
@@ -77,7 +87,6 @@ public class MainActivity extends AppCompatActivity {
                     JSONObject jsonObjectSys = response.getJSONObject("sys");
                     // int sunriseInfo = jsonObjectSys.getInt("sunrise");
                     //int sunsetInfo = jsonObjectSys.getInt("sunset");
-
                     DateFormat df = DateFormat.getTimeInstance();
                     String sunriseTime = df.format(new Date(jsonObjectSys.getInt("sunrise")));
                     String sunsetTime = df.format(new Date(jsonObjectSys.getInt("sunset")));
@@ -100,54 +109,6 @@ public class MainActivity extends AppCompatActivity {
         });
         MySingleton.getInstance(getApplicationContext()).addToRequestQueue(jsonObjectRequest);
 
-
-
-        //search_box = (EditText) findViewById(R.id.search_box);
-        //search_button = (Button) findViewById(R.id.search_Button);
-
-        /*search_button.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                receivedCityName = search_box.getText().toString();
-                if (receivedCityName == null) {
-                    //URL = "http://api.openweathermap.org/data/2.5/weather?q=Hamburg&appid=44db6a862fba0b067b1930da0d769e98";
-                    Toast.makeText(getApplicationContext(), "Please Enter a city", Toast.LENGTH_LONG).show();
-                } else {
-                    setURL(receivedCityName);
-                    search_box.setText("");
-                    Log.v("String URL : " , URL);
-                }
-
-                JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(URL, new Response.Listener<JSONObject>() {
-                    @Override
-                    public void onResponse(JSONObject response) {
-                        Log.v("Data from the web: ", response.toString());
-
-                        try {
-                            String city = response.getString("name");
-                            JSONObject jsonObjectMain = response.getJSONObject("main");
-                            String temp = convertToCelsius(jsonObjectMain.getString("temp"));
-                            temperature.setText(temp + "°");
-                            cityName.setText(city);
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                        }
-
-                    }
-                }, new Response.ErrorListener() {
-                    @Override
-                    public void onErrorResponse(VolleyError error) {
-                        VolleyLog.d("Main activity: ", error.getMessage());
-                    }
-                });
-                MySingleton.getInstance(getApplicationContext()).addToRequestQueue(jsonObjectRequest);
-            }
-        });*/
-
-        //RequestQueue queue = Volley.newRequestQueue(this);
-
-
-
     }
     public void init(){
         cityName = (TextView) findViewById(R.id.city_name);
@@ -159,6 +120,8 @@ public class MainActivity extends AppCompatActivity {
         max_temp = (TextView) findViewById(R.id.max_temp);
         min_temp = (TextView) findViewById(R.id.min_temp);
         description = (TextView) findViewById(R.id.description);
+        mNetworkImageView = (NetworkImageView)findViewById(R.id.networkImageView);
+
 
     }
     public int convertToCelsius(double temperature){
@@ -195,8 +158,6 @@ public class MainActivity extends AppCompatActivity {
                         Toast.makeText(getApplicationContext(), "Please Enter a city", Toast.LENGTH_LONG).show();
                     } else {
                         setURL(receivedCityName);
-                        //search_box.setText("");
-                       // Log.v("String URL : " , URL);
                     }
 
                     JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(URL, new Response.Listener<JSONObject>() {
@@ -211,8 +172,20 @@ public class MainActivity extends AppCompatActivity {
                                 JSONObject jsonObjectDescription = jsonArrayWeather.getJSONObject(0);
                                 String weatherDescription = jsonObjectDescription.getString("description");
                                 description.setText(weatherDescription);
+                                //for the weather icon.... get the icon string and pass it to setWeatherIconURl
+                                receivedIcon = jsonObjectDescription.getString("icon") +".png";
+                                setWeatherIconURL(receivedIcon);
+                                mImageLoader = MySingleton.getInstance(getApplication())
+                                        .getImageLoader();
 
+                                mImageLoader.get(weatherIconURL, ImageLoader.getImageListener(
+                                        mNetworkImageView,
+                                        R.mipmap.ic_launcher,
+                                        android.R.drawable.ic_dialog_alert
+                                ));
+                                mNetworkImageView.setImageUrl(weatherIconURL, mImageLoader);
 
+                                //----------------------------------------------------------------
                                 JSONObject jsonObjectMain = response.getJSONObject("main");
                                 int temp = convertToCelsius(jsonObjectMain.getDouble("temp"));
                                 double pressureData = jsonObjectMain.getDouble("pressure");
@@ -260,7 +233,6 @@ public class MainActivity extends AppCompatActivity {
             }
         };
         searchView.setOnQueryTextListener(queryTextListener);
-
         return super.onCreateOptionsMenu(menu);
 
     }
@@ -278,5 +250,13 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    public void setURL(String receivedCityName){
+        URL = "http://api.openweathermap.org/data/2.5/weather?q=" + receivedCityName +"&appid=44d0fc3e51b3da7b0e60c99de8bdfc88";
+    }
+
+    public void setWeatherIconURL(String receivedIcon){
+        weatherIconURL = "http://openweathermap.org/img/w/" + receivedIcon;
     }
 }
